@@ -13,10 +13,12 @@ public class LinkedQueue<E> {
     private Node<E> headNode;
     private Node<E> tailNode;
     private int size;
+    private boolean done;
     
     
     //Constructor
     public LinkedQueue() {
+        this.done = false;
         this.size = 0;
         this.headNode = null;
         this.tailNode = null;
@@ -74,7 +76,15 @@ public class LinkedQueue<E> {
         
         return tempString;
     }
+
     
+    public synchronized boolean isDone() {
+        return done;
+    }
+
+    public synchronized void setDone(boolean done) {
+        this.done = done;
+    }
     
     
     
@@ -98,7 +108,9 @@ public class LinkedQueue<E> {
             queue.enqueue(i);
         }
         
+        queue.dequeue();
         System.out.println(queue.size());
+        
         System.out.println(queue.toString());
     }
 }

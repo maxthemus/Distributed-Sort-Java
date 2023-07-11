@@ -67,7 +67,7 @@ public class BubbleSorter {
     //Main Method
     public static void main(String[] args) {
         BubbleSorter sorter = new BubbleSorter();
-        sorter.sortFile(new File("files\\client\\input"), new File("files\\client\\localoutput"));
+        sorter.sortFile(new File("files/client/input"), new File("files/client/localoutput"));
         
     }
 }

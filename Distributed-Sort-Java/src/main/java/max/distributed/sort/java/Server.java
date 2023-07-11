@@ -57,14 +57,14 @@ public class Server {
                 ClientSocket newClient = new ClientSocket(newConneciton);
                 
                 //Creating file to store the incomming values in
-                File tempFile = new File("files/server/tmp/networkFile");
+                File tempFile = new File("files/server/temp/networkFile");
                 
                 //Once Client is connected we want to listen for incomming files
                 FileReceiver reciever = new FileReceiver(tempFile, newClient.getSocket(), newClient.getReader());
                 reciever.recieveFile();
                 
                 //Now we sort the array
-                File sortedFile = new File("files/server/tmp/sortedFile");
+                File sortedFile = new File("files/server/temp/sortedFile");
                 FileSorter sorter = new FileSorter(sortedFile, tempFile);
                 sorter.sortFile();
                 
