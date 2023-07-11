@@ -5,66 +5,60 @@
 package max.distributed.sort.java;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 /**
  *
  * @author Maxth
  */
-public class FileSorter {
+public class FileSorter implements Runnable {
     //Fields
     private File outputFile;
     private File fileToSort;
+    private final static int MIN_FILE_SIZE = 5;
+    private int temp_file_count;
     
     
     //Constructor
     public FileSorter(File outputFile, File fileToSort) {
         this.outputFile = outputFile;
         this.fileToSort = fileToSort;
+        this.temp_file_count = 1;
     }
     
     
     //Methods
-    public boolean sortFile() {
-        Scanner sc;
+    @Override
+    public void run() {
         try {
-            sc = new Scanner(this.fileToSort);
-        } catch (FileNotFoundException ex) {
-            return false;
-        }
-        
-        ArrayList<Integer> buffer = new ArrayList<>();
-        
-        //Reading file into buffer
-        while(sc.hasNextInt()) {
-            buffer.add(sc.nextInt());
-        }
-        sc.close(); //Closing scanner
-        
-        //Sorting array
-        buffer = sortArray(buffer);
-        
-        //Opening print writer
-        PrintWriter writer;
-        try {
-            writer = new PrintWriter(this.outputFile);
+            //Setting up queue
+            LinkedQueue<Integer> queue = new LinkedQueue<>();
+            FileReader fileReader = new FileReader(fileToSort, queue);
+            Thread readerThread = new Thread();
+            readerThread.start();
+            
+            
+            ArrayList<File> fileArray = new ArrayList<>();
+            File tempFile = new File("files/client/temp/"+Thread.currentThread().getId() + "_" + this.temp_file_count++);
+            int currentValueCount = 0;
+            while(!queue.isDone()) {
+                while(queue.size() >= 1) {
+                    int value = queue.dequeue();
+                    
+                    
+                }
+            }
+            
+            
+            
         } catch(Exception e) {
             System.out.println(e);
-            return false;
+            System.exit(1);
         }
-        
-        //Writing to output array
-        for(int i = 0; i < buffer.size(); i++) {
-            writer.println(buffer.get(i));
-        }
-        
-        writer.close();
-
-        return true;
     }
+    
+    
+    
     
     private ArrayList<Integer> sortArray(ArrayList<Integer> array) {
         for(int i = 0; i < array.size(); i++) {
@@ -78,6 +72,12 @@ public class FileSorter {
         }
         
         return array;
+    }
+    
+    
+    private File mergeFiles(File fileOne, File fileTwo) {
+        
+        return null;
     }
     
 }

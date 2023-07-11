@@ -36,41 +36,54 @@ public class Client {
     
     public boolean networkSortFile(File fileToSort, File outputFile) {
         //Check if socket is open
-        if(this.socket == null) {
-            return false;
-        }
+//        if(this.socket == null) {
+//            return false;
+//        }
         
-        //Now we want to set up the threads
-        ArrayList<Integer> localArray = new ArrayList<>();
+        
         LinkedQueue<Integer> queue = new LinkedQueue<>();
         FileReader fileReader = new FileReader(fileToSort, queue);
-        Distributor distributor = new Distributor(socket, queue, localArray);
+        
+        
+        File localOut = new File("files/client/temp/local");
+        File networkOut = new File("files/client/temp/network");
+        File[] files = {localOut, networkOut};
+        
+        Distributor distributor = new Distributor(queue, files);
         
         Thread readerThread = new Thread(fileReader);
-        Thread senderThread = new Thread(distributor);
+        Thread distributorThread = new Thread(distributor);
         
         readerThread.start();
-        senderThread.start();
-        
+        distributorThread.start();
+       
         try {
-//            readerThread.join();
-            senderThread.join();
+            distributorThread.join();
         } catch(Exception e) {
             System.out.println(e);
             return false;
         }
-        System.out.println("File Read and Sent");
+
+        //Creating sender threads
+        Thread[] senderThreads = new Thread[files.length-1];
         
-        
-        localArray = sortArray(localArray);
-        
-        File recvFile = new File("files/client/temp/recv");
-        try {
-            
-            FileReceiver fileReciever = new FileReceiver(outputFile, this.socket, new BufferedReader(new InputStreamReader(this.socket.getInputStream())));
-        } catch(Exception e) {
-            System.out.println(e);
+        for(int i = 1; i < files.length; i++) {
+            FileSender sender = new FileSender(files[i], socket);
+            senderThreads[i-1] = new Thread();
         }
+        
+        
+        
+        
+        
+        
+        
+        //Now we want to send the files to all the different sockets
+        
+        
+        
+        
+        
         
         
         return true;

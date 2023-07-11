@@ -6,72 +6,63 @@ package max.distributed.sort.java;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 
 /**
  *
  * @author Maxth
  */
-public class FileSender {
+public class FileSender implements Runnable {
     //Fields
     private File file;
     private Socket socket;
-    private PrintWriter writer;
-    private BufferedReader reader;
     
     
     //Constructor
-    public FileSender(File file, Socket socket, PrintWriter writer, BufferedReader reader) {
+    public FileSender(File file, Socket socket) {
         this.file = file;
         this.socket = socket;
-        this.writer = writer;
-        this.reader = reader;
     }
     
     
     //Methods
-    public boolean sendFile() {
-        Scanner sc;
+    @Override
+    public void run() {
         try {
-            sc = new Scanner(this.file); //Opening file reader
+            LinkedQueue<Integer> queue = new LinkedQueue<>();
+            FileReader reader = new FileReader(file, queue);
+            Thread readerThread = new Thread(reader);
+            readerThread.start();
+            
+            //Opening up print writer and reader
+            PrintWriter socketWriter = new PrintWriter(this.socket.getOutputStream(), true);
+            BufferedReader socketReader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+            
+            //Keep sending until file is comp
+            while(!queue.isDone()) {
+                if(queue.size() >= 1) {
+                    socketWriter.println(queue.dequeue());
+                }
+                
+                //Now we wait for response
+                socketReader.readLine();
+            }
+            
+            //Clearing rest of queue
+            while(queue.size() >= 1) {
+                socketWriter.println(queue.dequeue());
+                socketReader.readLine();
+            }
+            
+            //Sending EOF
+            socketWriter.println("EOF");
         } catch(Exception e) {
             System.out.println(e);
-            return false;
+            System.exit(1);
         }
-
-        int tempNumber;
-            
-        while(sc.hasNext()) {
-            tempNumber = sc.nextInt();
-            this.writer.println(tempNumber);
-            
-            //Wait for response
-            String recv;
-            try {
-                recv = this.reader.readLine();
-            } catch (Exception ex) {
-                System.out.println(ex);
-            }
-        }
-        
-        //Sending EOF
-        this.writer.println("EOF");
-        
-        sc.close();
-        
-        return true;
     }
-    
-    
-    public static void main(String[] args) {
-        FileSender sender = new FileSender(new File("files/client/input"), null, null, null);
-        sender.sendFile();
-    }
-    
-    
 }

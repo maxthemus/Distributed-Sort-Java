@@ -6,8 +6,6 @@ package max.distributed.sort.java;
 
 import java.io.File;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -24,7 +22,6 @@ public class FileReader implements Runnable {
         this.fileToRead = fileToRead;
         this.queue = queue;
     }
-    
     
     
     //Methods
@@ -64,7 +61,7 @@ public class FileReader implements Runnable {
         try {
             thread.join();
         } catch (InterruptedException ex) {
-            Logger.getLogger(FileReader.class.getName()).log(Level.SEVERE, null, ex);
+            System.out.println(ex);
         }
         System.out.println(queue.size());
         

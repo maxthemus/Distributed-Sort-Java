@@ -70,8 +70,8 @@ public class Server {
                 
                 
                 //Now we want to send the file back
-                FileSender fileSender = new FileSender(sortedFile, newClient.getSocket(), newClient.getWriter(), newClient.getReader());
-                fileSender.sendFile();
+//                FileSender fileSender = new FileSender(sortedFile, newClient.getSocket(), newClient.getWriter(), newClient.getReader());
+//                fileSender.sendFile();
                 
                 System.out.println("ALL DONE");
             }

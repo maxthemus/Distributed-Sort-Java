@@ -4,11 +4,8 @@
  */
 package max.distributed.sort.java;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
-import java.util.ArrayList;
+import java.io.File;
+
 
 /**
  *
@@ -17,16 +14,12 @@ import java.util.ArrayList;
 public class Distributor implements Runnable {
     //Fields
     private final LinkedQueue<Integer> inputQueue;
-    private final Socket socket;
-    private final ArrayList<Integer> localArray;
-    private boolean sending;
+    private File[] tempFiles;
     
     //Constructor
-    public Distributor(Socket socket, LinkedQueue<Integer> inputQueue, ArrayList<Integer> localArray) {
+    public Distributor(LinkedQueue<Integer> inputQueue, File[] outputFiles) {
             this.inputQueue = inputQueue;
-            this.socket = socket;
-            this.sending = true;
-            this.localArray = localArray;
+            this.tempFiles = outputFiles;
     }
     
     
@@ -34,58 +27,55 @@ public class Distributor implements Runnable {
     //Methods
     @Override
     public void run() {
-        //Creating I/O streams
-        PrintWriter writer;
-        BufferedReader reader;
         try {
-            writer = new PrintWriter(this.socket.getOutputStream(), true);
-            reader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-        } catch(Exception e) {
-            System.out.println(e);
-            System.exit(0);
-            return;
-        }
-        
-
-        boolean keepingValue = true;
-        while(sending) {
-            if(inputQueue.size() <= 0) {
-                if(inputQueue.isDone()) {
-                    sending = false;
-                    
-                    //And we want to send EOF
-                    writer.println("EOF");
-                    System.out.println("EOF sent");
+            System.out.println(Thread.currentThread().getId() + " has started distributor");
+            //Creating queues for output
+            LinkedQueue<Integer>[] queues = (LinkedQueue<Integer>[])new LinkedQueue[this.tempFiles.length];
+            //Creating file writers for the files
+            FileWriter[] writers = new FileWriter[this.tempFiles.length];
+            Thread[] threads = new Thread[this.tempFiles.length]; 
+                        
+            //Creating objects
+            for(int i = 0; i < this.tempFiles.length; i++) {
+                queues[i] = new LinkedQueue<>();
+                writers[i] = new FileWriter(this.tempFiles[i], queues[i]);
+            }
+            
+            //Creating and starting threads
+            for(int i = 0; i < threads.length; i++) {
+                threads[i] = new Thread(writers[i]);
+                threads[i].start();
+            }            
+            
+            int indexPtr = 0;
+            while(!this.inputQueue.isDone()) {
+                if(this.inputQueue.size() >= 1) {
+                    queues[indexPtr++].enqueue(this.inputQueue.dequeue());
                 }
-            } else {
-                //We want to deque a value and send is
-                int value = inputQueue.dequeue();
                 
-                if(!keepingValue) {
-                    writer.println(value);
-
-                   try {
-                        //Now we wait for response
-                        while(reader.ready()) {
-                            reader.readLine();
-                        }
-                   } catch(Exception e) {
-                       System.out.println(e);
-                       System.exit(0);
-                       return;
-                   }  
-                } else {
-                    //We want to write into local array
-                    this.localArray.add(value);
+                if(indexPtr >= queues.length) {
+                    indexPtr = 0;
                 }
-            }      
-        }
-        
-        try{
-            reader.close();
-            writer.close();
+            }
+            
+            
+            //Setting all output queues as done
+            for(int i = 0; i < queues.length; i++) {
+                queues[i].setDone(true);
+            }
+            
+            
+            //Waiting for threads to join
+            for(int i = 0; i < threads.length; i++) {
+                threads[i].join();
+            }
+            
+            
+            System.out.println(Thread.currentThread().getId() + " has finished distributor");
         } catch(Exception e) {
             System.out.println(e);
+            System.exit(1);
+            return;
         }
     }
 }
