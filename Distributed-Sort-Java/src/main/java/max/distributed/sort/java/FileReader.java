@@ -28,7 +28,7 @@ public class FileReader implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("Starting to read File");
+            //System.out.println("Starting to read File");
             
             Scanner reader = new Scanner(this.fileToRead);
             
@@ -40,7 +40,7 @@ public class FileReader implements Runnable {
             
             reader.close();
             
-            System.out.println("Finished reading file");
+            //System.out.println("Finished reading file");
         } catch (Exception ex) {
             System.out.println(ex);
             System.exit(0);

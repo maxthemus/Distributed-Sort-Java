@@ -5,7 +5,10 @@
 package max.distributed.sort.java;
 
 import java.io.File;
+import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -13,17 +16,20 @@ import java.util.ArrayList;
  */
 public class FileSorter implements Runnable {
     //Fields
+    private final static int MIN_FILE_SIZE = 5;
+    public final static String TEMP_FILE_PATH = "files/client/temp/";
     private File outputFile;
     private File fileToSort;
-    private final static int MIN_FILE_SIZE = 5;
     private int temp_file_count;
+    private boolean done;
     
     
     //Constructor
-    public FileSorter(File outputFile, File fileToSort) {
-        this.outputFile = outputFile;
+    public FileSorter(File fileToSort) {
+        this.outputFile = null;
         this.fileToSort = fileToSort;
         this.temp_file_count = 1;
+        this.done = false;
     }
     
     
@@ -34,50 +40,194 @@ public class FileSorter implements Runnable {
             //Setting up queue
             LinkedQueue<Integer> queue = new LinkedQueue<>();
             FileReader fileReader = new FileReader(fileToSort, queue);
-            Thread readerThread = new Thread();
+            Thread readerThread = new Thread(fileReader);
             readerThread.start();
             
             
+            
             ArrayList<File> fileArray = new ArrayList<>();
-            File tempFile = new File("files/client/temp/"+Thread.currentThread().getId() + "_" + this.temp_file_count++);
+            File tempFile = new File(TEMP_FILE_PATH + Thread.currentThread().getId() + "_" + this.temp_file_count++);
+            
+            //Creating original files
+            int[] buffer = new int[MIN_FILE_SIZE];
             int currentValueCount = 0;
             while(!queue.isDone()) {
                 while(queue.size() >= 1) {
-                    int value = queue.dequeue();
+                    buffer[currentValueCount++] = queue.dequeue();
                     
-                    
+                    if(currentValueCount >= MIN_FILE_SIZE) {
+                        //We want to sort the buffer
+                        buffer = this.sortArray(buffer);
+                        
+                        //Then read it into the tempFile
+                        this.writeFile(buffer, tempFile);
+                        
+                        currentValueCount = 0;
+                        buffer = new int[MIN_FILE_SIZE];
+                        
+                        fileArray.add(tempFile);
+                        tempFile = new File(TEMP_FILE_PATH + Thread.currentThread().getId() + "_" + this.temp_file_count++);
+                    }
                 }
             }
             
             
+            //When the queue is done we want to double check that the queue is empty
+            while(queue.size() >= 1) {
+                buffer[currentValueCount++] = queue.dequeue();
+
+                if(currentValueCount >= MIN_FILE_SIZE) {
+                    buffer = this.sortArray(buffer);
+                    
+                    //Then read it into the tempFile
+                    this.writeFile(buffer, tempFile);
+                    
+                    currentValueCount = 0;
+                    buffer = new int[MIN_FILE_SIZE];
+
+                    fileArray.add(tempFile);
+                    tempFile = new File(TEMP_FILE_PATH + Thread.currentThread().getId() + "_" + this.temp_file_count++);
+                }
+            }
             
+            //Once all files have been written into the fileArray we want to start the merging process
+            FileMerger merger = new FileMerger("merger");
+            while(fileArray.size() > 1) {
+                File tempOne = fileArray.remove(0);
+                File tempTwo = fileArray.remove(0);
+                    
+                File mergedFile = mergeFiles(tempOne, tempTwo);
+                fileArray.add(mergedFile);
+            }
+            
+            this.outputFile = fileArray.get(0);
+            this.done = true;
+        } catch(Exception e) {
+            System.out.println(e);
+            System.out.println("HERE");
+            System.exit(2);
+        }
+    }
+    
+    
+    public File mergeFiles(File fileOne, File fileTwo) {
+        try {
+            System.out.println("MERGING " + fileOne.getName() + " : " + fileTwo.getName());
+            //Setting up readers
+            LinkedQueue<Integer>[] queues = (LinkedQueue<Integer>[])(new LinkedQueue[2]);
+            FileReader[] readers = new FileReader[2];
+            Thread[] readerThreads = new Thread[2];            
+            for(int i = 0; i < 2; i++) {
+                queues[i] = new LinkedQueue<>();
+                readers[i] = new FileReader(((i == 0) ? fileOne : fileTwo), queues[i]);
+                readerThreads[i] = new Thread(readers[i]);
+                readerThreads[i].start();
+            }
+
+            //Now we set up an output queue to write to a file
+            File outputFile = new File(TEMP_FILE_PATH + Thread.currentThread().getId() + "_" + this.temp_file_count++);
+            LinkedQueue<Integer> outputQueue = new LinkedQueue<>();
+            FileWriter writer = new FileWriter(outputFile, outputQueue);
+            Thread writerThread = new Thread(writer);
+            writerThread.start();
+            
+            
+            //Startin sort               
+            while((!queues[0].isDone() || !queues[1].isDone()) || (queues[0].size() > 0 && queues[1].size() > 0)) {
+                if(queues[0].size() >= 1 && queues[1].size() >= 1) {
+                    if(queues[0].peek() <= queues[1].peek()) {
+                        outputQueue.enqueue(queues[0].dequeue());
+                    } else {
+                        outputQueue.enqueue(queues[1].dequeue());
+                    }
+                }
+            }
+                        
+            while(queues[0].size() > 0) {
+                outputQueue.enqueue(queues[0].dequeue());
+            }
+            
+            while(queues[1].size() > 0) {
+                outputQueue.enqueue(queues[1].dequeue());
+            }  
+            
+
+            outputQueue.setDone(true);
+            writerThread.join();
+            
+            return outputFile;
+        } catch(Exception e) {
+            System.out.println(e);
+            System.exit(3);
+            return null;
+        }
+    }
+    
+    
+    //COULD MULTI THREAD THIS USING FILE WRITER BUT IM NOT SURE IF IT WILL
+    //INCREASE PERFROMANCE
+    private void writeFile(int[] array, File file) {
+        try {
+            PrintWriter writer = new PrintWriter(file);
+            
+            for(int i = 0; i < array.length; i++) {
+                writer.println(array[i]);
+            }
+            
+            writer.close();
         } catch(Exception e) {
             System.out.println(e);
             System.exit(1);
+            return;
         }
     }
     
     
+    //Must check null is used
+    public File getOutputFile() {
+        return this.outputFile;
+    }
     
-    
-    private ArrayList<Integer> sortArray(ArrayList<Integer> array) {
-        for(int i = 0; i < array.size(); i++) {
-            for(int j = 1; j < (array.size() - i); j++) {
-                if(array.get(j-1) > array.get(j)) {
-                    int temp = array.get(j-1);
-                    array.set(j-1, array.get(j));
-                    array.set(j, temp);
-                }
+    //Insertion sort because extremely small data set
+    private int[] sortArray(int[] arr) {
+        int n = arr.length;
+        for (int i = 1; i < n; ++i) {
+            int key = arr[i];
+            int j = i - 1;
+ 
+            /* Move elements of arr[0..i-1], that are
+               greater than key, to one position ahead
+               of their current position */
+            while (j >= 0 && arr[j] > key) {
+                arr[j + 1] = arr[j];
+                j = j - 1;
             }
+            arr[j + 1] = key;
         }
-        
-        return array;
+        return arr;
+    }
+    
+    public boolean getDone() {
+        return this.done;
     }
     
     
-    private File mergeFiles(File fileOne, File fileTwo) {
+    //Main Method
+    public static void main(String[] args) {
+        File fileToSort = new File("files/client/input");
+        FileSorter sorter = new FileSorter(fileToSort);
+        Thread thread = new Thread(sorter);
         
-        return null;
+        thread.start();
+
+        
+        try {
+            thread.join();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(FileSorter.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        System.out.println("DONE");
+        System.out.println(sorter.getOutputFile().getName());
     }
     
 }

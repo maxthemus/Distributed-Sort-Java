@@ -5,12 +5,8 @@
 package max.distributed.sort.java;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+
 
 /**
  *  Currently merges two files
@@ -18,71 +14,68 @@ import java.util.logging.Logger;
  */
 public class FileMerger {
     //Fields
-    private File inputOne;
-    private File inputTwo;
-    private File output;
-    
+    public final static String TEMP_FILE_PATH = "files/client/temp/";
+    private static int temp_file_count = 0;
+    private String name;
     
     //Constructor
-    public FileMerger(File output, File inputOne, File inputTwo) {
-        this.inputOne = inputOne;
-        this.inputTwo = inputTwo;
-        this.output = output;
+    public FileMerger(String name) {
+        this.name = name;
     }
     
     
     //Methods
-    public boolean mergeFiles() {
-        ArrayList<Integer> bufferOne = new ArrayList<>();
-        ArrayList<Integer> bufferTwo = new ArrayList<>();
-        
-        PrintWriter writer;
-        Scanner scOne, scTwo;
+    public File mergeFiles(File fileOne, File fileTwo) {
         try {
-            scOne = new Scanner(this.inputOne);
-            scTwo = new Scanner(this.inputTwo);
-            
-            writer = new PrintWriter(this.output);
-        } catch (FileNotFoundException ex) {
-            return false;
-        }
-        
-        while(scOne.hasNext()) {
-            bufferOne.add(scOne.nextInt());
-        }
-        
-        while(scTwo.hasNext()) {
-            bufferTwo.add(scTwo.nextInt());
-        }
-        
-        //Closing readers
-        scOne.close();
-        scTwo.close();
-        
-        while(bufferOne.size() > 0 && bufferTwo.size() > 0) {
-            if(bufferOne.get(0) <= bufferTwo.get(0)) {
-                writer.println(bufferOne.get(0));
-                bufferOne.remove(0);
-            } else {
-                writer.println(bufferTwo.get(0));
-                bufferTwo.remove(0);
+            //System.out.println("MERGING " + fileOne.getName() + " : " + fileTwo.getName());
+            //Setting up readers
+            LinkedQueue<Integer>[] queues = (LinkedQueue<Integer>[])(new LinkedQueue[2]);
+            FileReader[] readers = new FileReader[2];
+            Thread[] readerThreads = new Thread[2];            
+            for(int i = 0; i < 2; i++) {
+                queues[i] = new LinkedQueue<>();
+                readers[i] = new FileReader(((i == 0) ? fileOne : fileTwo), queues[i]);
+                readerThreads[i] = new Thread(readers[i]);
+                readerThreads[i].start();
             }
+
+            //Now we set up an output queue to write to a file
+            File outputFile = new File(TEMP_FILE_PATH + this.name + "_"+ Thread.currentThread().getId() + "_" + this.temp_file_count++);
+            LinkedQueue<Integer> outputQueue = new LinkedQueue<>();
+            FileWriter writer = new FileWriter(outputFile, outputQueue);
+            Thread writerThread = new Thread(writer);
+            writerThread.start();
+            
+            
+            //Startin sort               
+            while((!queues[0].isDone() || !queues[1].isDone()) || (queues[0].size() > 0 && queues[1].size() > 0)) {
+                if(queues[0].size() >= 1 && queues[1].size() >= 1) {
+                    if(queues[0].peek() <= queues[1].peek()) {
+                        outputQueue.enqueue(queues[0].dequeue());
+                    } else {
+                        outputQueue.enqueue(queues[1].dequeue());
+                    }
+                }
+            }
+                        
+            while(queues[0].size() > 0) {
+                outputQueue.enqueue(queues[0].dequeue());
+            }
+            
+            while(queues[1].size() > 0) {
+                outputQueue.enqueue(queues[1].dequeue());
+            }  
+            
+
+            outputQueue.setDone(true);
+            writerThread.join();
+            
+            return outputFile;
+        } catch(Exception e) {
+            System.out.println(e);
+            System.exit(3);
+            return null;
         }
-        
-        //Clearing buffers
-        while(bufferOne.size() > 0) {
-            writer.println(bufferOne.get(0));
-            bufferOne.remove(0);
-        }
-        
-        while(bufferTwo.size() > 0) {
-            writer.println(bufferTwo.get(0));
-            bufferTwo.remove(0);
-        }
-        
-        writer.close();
-        
-        return true;
     }
     
     

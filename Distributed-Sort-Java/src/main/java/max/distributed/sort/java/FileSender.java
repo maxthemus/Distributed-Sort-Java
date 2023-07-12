@@ -33,23 +33,24 @@ public class FileSender implements Runnable {
     @Override
     public void run() {
         try {
+            System.out.println("SENDING FILE");
             LinkedQueue<Integer> queue = new LinkedQueue<>();
             FileReader reader = new FileReader(file, queue);
             Thread readerThread = new Thread(reader);
             readerThread.start();
             
             //Opening up print writer and reader
+            BufferedReader socketReader = new BufferedReader(new InputStreamReader(this.socket.getInputStream())); 
             PrintWriter socketWriter = new PrintWriter(this.socket.getOutputStream(), true);
-            BufferedReader socketReader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
-            
+
             //Keep sending until file is comp
             while(!queue.isDone()) {
                 if(queue.size() >= 1) {
                     socketWriter.println(queue.dequeue());
+                    socketReader.readLine();
+                } else {
+                    Thread.yield();
                 }
-                
-                //Now we wait for response
-                socketReader.readLine();
             }
             
             //Clearing rest of queue

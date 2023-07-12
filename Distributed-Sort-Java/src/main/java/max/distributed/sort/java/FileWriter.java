@@ -29,20 +29,28 @@ public class FileWriter implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println(Thread.currentThread().getId() + " has started writing to " + this.outputFile.getName());
+            //System.out.println(Thread.currentThread().getId() + " has started writing to " + this.outputFile.getName());
             
             PrintWriter writer = new PrintWriter(this.outputFile);
-            
+                        
             while(!this.queue.isDone()) {
                 if(this.queue.size() >= 1) {
                     int value = this.queue.dequeue();
                     writer.println(value);
+                } else {
+                    Thread.yield();
                 }
+            }
+            
+            //Finished writing rest of queue
+            while(this.queue.size() >= 1) {
+                int value = this.queue.dequeue();
+                writer.println(value);
             }
             
             writer.close();
             
-            System.out.println(Thread.currentThread().getId() + " has finished writing to " + this.outputFile.getName());
+            //System.out.println(Thread.currentThread().getId() + " has finished writing to " + this.outputFile.getName());
         } catch(Exception e) {
             System.out.println(e);
             System.exit(1);

@@ -76,6 +76,10 @@ public class LinkedQueue<E> {
         
         return tempString;
     }
+    
+    public E peek() {
+        return this.headNode.value;
+    }
 
     
     public synchronized boolean isDone() {

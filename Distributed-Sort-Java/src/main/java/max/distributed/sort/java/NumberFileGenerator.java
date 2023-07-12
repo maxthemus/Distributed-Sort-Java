@@ -50,6 +50,6 @@ public class NumberFileGenerator {
     //Main Method
     public static void main(String[] args) {
         File output = new File("files/client/input");
-        NumberFileGenerator gen = new NumberFileGenerator(1000, 0, 500, output);
+        NumberFileGenerator gen = new NumberFileGenerator(1000, 0, 10000, output);
     }
 }

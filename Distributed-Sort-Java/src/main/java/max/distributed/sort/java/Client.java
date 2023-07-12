@@ -17,6 +17,7 @@ import java.util.ArrayList;
  */
 public class Client {
     //Fields
+    private static final String PATH_NAME = "files/client/temp/";
     private Socket socket;
 //    private PrintWriter writer;
 //    private BufferedReader reader;
@@ -34,11 +35,11 @@ public class Client {
     
 
     
-    public boolean networkSortFile(File fileToSort, File outputFile) {
+    public File networkSortFile(File fileToSort) {
         //Check if socket is open
-//        if(this.socket == null) {
-//            return false;
-//        }
+        if(this.socket == null) {
+            return null;
+        }
         
         
         LinkedQueue<Integer> queue = new LinkedQueue<>();
@@ -61,32 +62,98 @@ public class Client {
             distributorThread.join();
         } catch(Exception e) {
             System.out.println(e);
-            return false;
+            return null;
         }
 
+        System.out.println("SENDING FILES");
         //Creating sender threads
         Thread[] senderThreads = new Thread[files.length-1];
         
         for(int i = 1; i < files.length; i++) {
             FileSender sender = new FileSender(files[i], socket);
-            senderThreads[i-1] = new Thread();
+            senderThreads[i-1] = new Thread(sender);
+            senderThreads[i-1].start();
+        }
+        
+        System.out.println("SORTING START");
+        //Creating the sorter thread
+        FileSorter localSorter = new FileSorter(files[0]);
+        Thread sorterThread = new Thread(localSorter);
+        sorterThread.start();
+        
+        
+        //Before recieving we want to wait for the sender threads to finish
+        for(int i = 0; i < senderThreads.length; i++) {
+            try {
+                senderThreads[i].join();
+            } catch(Exception e) {
+                System.out.println(e);
+                System.exit(1);
+            }
+        }
+        
+        System.out.println("SEND DONE");
+        
+        System.out.println("STARTING Reciever");
+        
+        //Now we want to wait to recieve a file from the different sockets
+        FileReceiver[] recievers = new FileReceiver[senderThreads.length];
+        File[] outputFiles = new File[senderThreads.length+1];
+        Thread[] recieverThreads = new Thread[senderThreads.length];
+        for(int i = 0; i < senderThreads.length; i++) {
+            outputFiles[i+1] = new File(PATH_NAME + "output_" + i);
+            recievers[i] = new FileReceiver(outputFiles[i+1], this.socket);
+            recieverThreads[i] = new Thread(recievers[i]);
+            recieverThreads[i].start();
         }
         
         
+        //Now we want to join the sorter thread and copy file into index 0 of outputFiles
+        try {
+            sorterThread.join();
+            System.out.println("SORTING DONE");
+        } catch(Exception e ){
+            System.out.println("ERROR SORTING");
+            System.exit(1);
+        }
+        if(localSorter.getDone()) {
+            outputFiles[0] = localSorter.getOutputFile();
+        } else {
+            System.out.println("ISN'T DONE ERROR");
+            System.exit(1);
+        }
         
+        //Now we join all the threads
+        for(int i = 0; i < recieverThreads.length; i++) {
+            try {
+                recieverThreads[i].join();
+            } catch(Exception e) {
+                System.out.println(e);
+                System.exit(1);
+            }
+        }
         
-        
-        
-        
-        //Now we want to send the files to all the different sockets
-        
-        
-        
-        
-        
-        
-        
-        return true;
+        //Now that we have all the files we need to merge them into one file and then 
+        FileMerger merger = new FileMerger("final");
+        int placeIndex = 0;
+        int segEnd = outputFiles.length;
+        while(segEnd > 1) {
+            placeIndex = 0;
+            for(int i = 0; i < segEnd; i+=2) {
+                File tempOne = outputFiles[i];
+                File tempTwo = outputFiles[i+1];
+                
+                if(tempTwo == null) {
+                    outputFiles[placeIndex++] = tempOne;
+                } else {
+                    File mergedFile = merger.mergeFiles(tempOne, tempTwo);
+                    outputFiles[placeIndex++] = mergedFile;
+                }
+
+            }
+            segEnd = placeIndex;
+        }
+        return outputFiles[0];
     }
     
     private ArrayList<Integer> sortArray(ArrayList<Integer> array) {
@@ -106,6 +173,12 @@ public class Client {
     
     public static void main(String[] args) {
         Client client = new Client("127.0.0.1", 3010);
-        client.networkSortFile(new File("files/client/input"), new File("files/client/output"));
+        File outputFile = client.networkSortFile(new File("files/client/input"));
+        
+        if(outputFile == null) {
+            System.out.println("FAILED");
+        } else {
+            System.out.println(outputFile.getName());
+        }
     }
 }

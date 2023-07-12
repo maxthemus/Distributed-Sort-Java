@@ -53,26 +53,50 @@ public class Server {
         try {
             while(this.serverRunning) {
                 Socket newConneciton = this.serverSocket.accept();
-                //Creating client object
-                ClientSocket newClient = new ClientSocket(newConneciton);
                 
                 //Creating file to store the incomming values in
                 File tempFile = new File("files/server/temp/networkFile");
                 
                 //Once Client is connected we want to listen for incomming files
-                FileReceiver reciever = new FileReceiver(tempFile, newClient.getSocket(), newClient.getReader());
-                reciever.recieveFile();
+                FileReceiver reciever = new FileReceiver(tempFile, newConneciton);
+                Thread recieverThread = new Thread(reciever);
+                recieverThread.start();
                 
+                //Waiting for file to be read in
+                recieverThread.join();
+                
+                System.out.println("Recieved file");
+                System.out.println("SORTING FILE");
                 //Now we sort the array
-                File sortedFile = new File("files/server/temp/sortedFile");
-                FileSorter sorter = new FileSorter(sortedFile, tempFile);
-                sorter.sortFile();
+                FileSorter sorter = new FileSorter(tempFile);
+                Thread sorterThread = new Thread(sorter);
+                sorterThread.start();
                 
+                //Waiting for sorting to finish
+                sorterThread.join();
                 
-                //Now we want to send the file back
-//                FileSender fileSender = new FileSender(sortedFile, newClient.getSocket(), newClient.getWriter(), newClient.getReader());
-//                fileSender.sendFile();
+                System.out.println("SORTING FINISHED");
                 
+                File outputFile = null;
+                if(sorter.getDone()) {
+                    outputFile = sorter.getOutputFile();
+                    System.out.println("OUTPUT = " + outputFile.getName());
+                } else {
+                    System.out.println("ERROR sorting not done");
+                    System.exit(1);
+                }
+                
+                if(outputFile != null) {
+                    //Sending back file
+                    FileSender sender = new FileSender(outputFile, newConneciton);
+                    Thread senderThread = new Thread(sender);
+                    senderThread.start();
+                    senderThread.join();
+                } else {
+                    System.out.println("FILE NOT SORTED");
+                    System.exit(1);
+                }
+
                 System.out.println("ALL DONE");
             }
         } catch(Exception e) {
