@@ -14,13 +14,14 @@ import java.io.File;
  */
 public class FileMerger {
     //Fields
-    public final static String TEMP_FILE_PATH = "files/client/temp/";
+    public final String TEMP_FILE_PATH;
     private static int temp_file_count = 0;
     private String name;
     
     //Constructor
-    public FileMerger(String name) {
+    public FileMerger(String name, String tempFilePath) {
         this.name = name;
+        this.TEMP_FILE_PATH = tempFilePath;
     }
     
     

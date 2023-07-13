@@ -7,8 +7,6 @@ package max.distributed.sort.java;
 import java.io.File;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -17,7 +15,7 @@ import java.util.logging.Logger;
 public class FileSorter implements Runnable {
     //Fields
     private final static int MIN_FILE_SIZE = 5;
-    public final static String TEMP_FILE_PATH = "files/client/temp/";
+    private final String TEMP_FILE_PATH;
     private File outputFile;
     private File fileToSort;
     private int temp_file_count;
@@ -25,11 +23,13 @@ public class FileSorter implements Runnable {
     
     
     //Constructor
-    public FileSorter(File fileToSort) {
+    public FileSorter(File fileToSort, String tempFileFolder) {
         this.outputFile = null;
         this.fileToSort = fileToSort;
         this.temp_file_count = 1;
         this.done = false;
+        
+        this.TEMP_FILE_PATH = tempFileFolder;
     }
     
     
@@ -91,13 +91,17 @@ public class FileSorter implements Runnable {
             }
             
             //Once all files have been written into the fileArray we want to start the merging process
-            FileMerger merger = new FileMerger("merger");
+            FileMerger merger = new FileMerger("merger", this.TEMP_FILE_PATH);
             while(fileArray.size() > 1) {
                 File tempOne = fileArray.remove(0);
                 File tempTwo = fileArray.remove(0);
                     
                 File mergedFile = mergeFiles(tempOne, tempTwo);
                 fileArray.add(mergedFile);
+                
+                //Clean up old files
+                tempOne.delete();
+                tempTwo.delete();
             }
             
             this.outputFile = fileArray.get(0);
@@ -112,7 +116,6 @@ public class FileSorter implements Runnable {
     
     public File mergeFiles(File fileOne, File fileTwo) {
         try {
-            System.out.println("MERGING " + fileOne.getName() + " : " + fileTwo.getName());
             //Setting up readers
             LinkedQueue<Integer>[] queues = (LinkedQueue<Integer>[])(new LinkedQueue[2]);
             FileReader[] readers = new FileReader[2];
@@ -213,21 +216,21 @@ public class FileSorter implements Runnable {
     
     
     //Main Method
-    public static void main(String[] args) {
-        File fileToSort = new File("files/client/input");
-        FileSorter sorter = new FileSorter(fileToSort);
-        Thread thread = new Thread(sorter);
-        
-        thread.start();
-
-        
-        try {
-            thread.join();
-        } catch (InterruptedException ex) {
-            Logger.getLogger(FileSorter.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        System.out.println("DONE");
-        System.out.println(sorter.getOutputFile().getName());
-    }
+//    public static void main(String[] args) {
+//        File fileToSort = new File("files/client/input");
+//        FileSorter sorter = new FileSorter(fileToSort);
+//        Thread thread = new Thread(sorter);
+//        
+//        thread.start();
+//
+//        
+//        try {
+//            thread.join();
+//        } catch (InterruptedException ex) {
+//            Logger.getLogger(FileSorter.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+//        System.out.println("DONE");
+//        System.out.println(sorter.getOutputFile().getName());
+//    }
     
 }

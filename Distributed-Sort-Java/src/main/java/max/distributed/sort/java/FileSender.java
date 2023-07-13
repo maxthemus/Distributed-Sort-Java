@@ -33,7 +33,7 @@ public class FileSender implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("SENDING FILE");
+//            System.out.println("SENDING FILE");
             LinkedQueue<Integer> queue = new LinkedQueue<>();
             FileReader reader = new FileReader(file, queue);
             Thread readerThread = new Thread(reader);

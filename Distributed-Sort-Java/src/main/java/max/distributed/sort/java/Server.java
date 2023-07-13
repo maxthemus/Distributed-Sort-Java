@@ -18,6 +18,8 @@ import java.util.ArrayList;
  */
 public class Server {
     //Fields
+    private final String LINUX_FILE_PATH = "files/server/";
+    private final String WINDOWS_FILE_PATH = "files\\server\\";
     private final int PORT;
     private boolean serverRunning;
     private ServerSocket serverSocket;
@@ -55,7 +57,7 @@ public class Server {
                 Socket newConneciton = this.serverSocket.accept();
                 
                 //Creating file to store the incomming values in
-                File tempFile = new File("files/server/temp/networkFile");
+                File tempFile = new File(WINDOWS_FILE_PATH + "temp\\input_file");
                 
                 //Once Client is connected we want to listen for incomming files
                 FileReceiver reciever = new FileReceiver(tempFile, newConneciton);
@@ -65,22 +67,22 @@ public class Server {
                 //Waiting for file to be read in
                 recieverThread.join();
                 
-                System.out.println("Recieved file");
-                System.out.println("SORTING FILE");
+//                System.out.println("Recieved file");
+//                System.out.println("SORTING FILE");
                 //Now we sort the array
-                FileSorter sorter = new FileSorter(tempFile);
+                FileSorter sorter = new FileSorter(tempFile, WINDOWS_FILE_PATH + "temp\\");
                 Thread sorterThread = new Thread(sorter);
                 sorterThread.start();
                 
                 //Waiting for sorting to finish
                 sorterThread.join();
                 
-                System.out.println("SORTING FINISHED");
+//                System.out.println("SORTING FINISHED");
                 
                 File outputFile = null;
                 if(sorter.getDone()) {
                     outputFile = sorter.getOutputFile();
-                    System.out.println("OUTPUT = " + outputFile.getName());
+//                    System.out.println("OUTPUT = " + outputFile.getName());
                 } else {
                     System.out.println("ERROR sorting not done");
                     System.exit(1);
@@ -97,7 +99,11 @@ public class Server {
                     System.exit(1);
                 }
 
-                System.out.println("ALL DONE");
+//                System.out.println("ALL DONE");
+                
+                //Cleaning up files
+                tempFile.delete();
+                outputFile.delete();
             }
         } catch(Exception e) {
             System.out.println(e);

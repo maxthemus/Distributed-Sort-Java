@@ -28,7 +28,7 @@ public class Distributor implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println(Thread.currentThread().getId() + " has started distributor");
+//            System.out.println(Thread.currentThread().getId() + " has started distributor");
             //Creating queues for output
             LinkedQueue<Integer>[] queues = (LinkedQueue<Integer>[])new LinkedQueue[this.tempFiles.length];
             //Creating file writers for the files
@@ -71,7 +71,7 @@ public class Distributor implements Runnable {
             }
             
             
-            System.out.println(Thread.currentThread().getId() + " has finished distributor");
+//            System.out.println(Thread.currentThread().getId() + " has finished distributor");
         } catch(Exception e) {
             System.out.println(e);
             System.exit(1);
