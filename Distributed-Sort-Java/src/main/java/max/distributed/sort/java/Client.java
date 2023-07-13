@@ -4,9 +4,7 @@
 
 package max.distributed.sort.java;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.ArrayList;
 
@@ -35,7 +33,7 @@ public class Client {
     
 
     
-    public File networkSortFile(File fileToSort) {
+    public File networkSortFile(File fileToSort, File outputFile) {
         //Check if socket is open
         if(this.socket == null) {
             return null;
@@ -137,11 +135,13 @@ public class Client {
         FileMerger merger = new FileMerger("final");
         int placeIndex = 0;
         int segEnd = outputFiles.length;
-        while(segEnd > 1) {
+        while(segEnd >= 1) {
             placeIndex = 0;
             for(int i = 0; i < segEnd; i+=2) {
                 File tempOne = outputFiles[i];
                 File tempTwo = outputFiles[i+1];
+                outputFiles[i] = null;
+                outputFiles[i+1] = null;
                 
                 if(tempTwo == null) {
                     outputFiles[placeIndex++] = tempOne;
@@ -149,10 +149,21 @@ public class Client {
                     File mergedFile = merger.mergeFiles(tempOne, tempTwo);
                     outputFiles[placeIndex++] = mergedFile;
                 }
-
             }
             segEnd = placeIndex;
+            
+            System.out.println("LOOP");
         }
+        
+        System.out.println(segEnd);
+        System.out.println(outputFiles[0]);
+        System.out.println(outputFiles[1]);
+        System.out.println(outputFiles[2]);
+        
+        //Now we want to merge the last two files into the output file
+        //outputFile = merger.mergeFiles(outputFiles[0], outputFiles[1], outputFile);
+        
+        
         return outputFiles[0];
     }
     
@@ -172,8 +183,11 @@ public class Client {
     
     
     public static void main(String[] args) {
+        File inputFile = new File("files/client/input");
+        File outputFile = new File("files/client/output");
+        
         Client client = new Client("127.0.0.1", 3010);
-        File outputFile = client.networkSortFile(new File("files/client/input"));
+        outputFile = client.networkSortFile(inputFile, outputFile);
         
         if(outputFile == null) {
             System.out.println("FAILED");

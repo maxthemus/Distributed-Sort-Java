@@ -56,9 +56,7 @@ public class FileReceiver implements Runnable {
                 socketWriter.println("OK");
             }
             
-            queue.setDone(true);
-            System.out.println("DONE");
-            
+            queue.setDone(true);            
             //Closing reader and writer
 //            socketReader.close();
 //            socketWriter.close();
