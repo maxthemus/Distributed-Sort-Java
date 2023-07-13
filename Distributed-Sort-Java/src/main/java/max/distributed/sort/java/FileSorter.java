@@ -37,6 +37,7 @@ public class FileSorter implements Runnable {
     @Override
     public void run() {
         try {
+            int count = 0;
             //Setting up queue
             LinkedQueue<Integer> queue = new LinkedQueue<>();
             FileReader fileReader = new FileReader(fileToSort, queue);
@@ -51,22 +52,25 @@ public class FileSorter implements Runnable {
             //Creating original files
             int[] buffer = new int[MIN_FILE_SIZE];
             int currentValueCount = 0;
+            boolean fileAdded = false;
             while(!queue.isDone()) {
                 while(queue.size() >= 1) {
                     buffer[currentValueCount++] = queue.dequeue();
+                    fileAdded = false;
                     
                     if(currentValueCount >= MIN_FILE_SIZE) {
                         //We want to sort the buffer
-                        buffer = this.sortArray(buffer);
+                        buffer = this.sortArray(buffer, currentValueCount);
                         
                         //Then read it into the tempFile
-                        this.writeFile(buffer, tempFile);
+                        this.writeFile(buffer, currentValueCount, tempFile);
                         
                         currentValueCount = 0;
                         buffer = new int[MIN_FILE_SIZE];
                         
                         fileArray.add(tempFile);
                         tempFile = new File(TEMP_FILE_PATH + Thread.currentThread().getId() + "_" + this.temp_file_count++);
+                        fileAdded = true;
                     }
                 }
             }
@@ -75,20 +79,39 @@ public class FileSorter implements Runnable {
             //When the queue is done we want to double check that the queue is empty
             while(queue.size() >= 1) {
                 buffer[currentValueCount++] = queue.dequeue();
-
+                fileAdded = false;
+                
                 if(currentValueCount >= MIN_FILE_SIZE) {
-                    buffer = this.sortArray(buffer);
+                    buffer = this.sortArray(buffer, currentValueCount);
                     
                     //Then read it into the tempFile
-                    this.writeFile(buffer, tempFile);
+                    this.writeFile(buffer, currentValueCount, tempFile);
                     
                     currentValueCount = 0;
                     buffer = new int[MIN_FILE_SIZE];
 
                     fileArray.add(tempFile);
                     tempFile = new File(TEMP_FILE_PATH + Thread.currentThread().getId() + "_" + this.temp_file_count++);
+                    fileAdded = true;
                 }
             }
+            
+            //Checking to see if the buffer is half empty with file needing to be empty
+            if(!fileAdded) {
+                //We must add final file
+                buffer = this.sortArray(buffer, currentValueCount);
+                    
+                //Then read it into the tempFile
+                this.writeFile(buffer, currentValueCount, tempFile);
+
+                currentValueCount = 0;
+                buffer = new int[MIN_FILE_SIZE];
+
+                fileArray.add(tempFile);
+                tempFile = new File(TEMP_FILE_PATH + Thread.currentThread().getId() + "_" + this.temp_file_count++);
+            }
+            
+            
             
             //Once all files have been written into the fileArray we want to start the merging process
             FileMerger merger = new FileMerger("merger", this.TEMP_FILE_PATH);
@@ -169,12 +192,13 @@ public class FileSorter implements Runnable {
     
     //COULD MULTI THREAD THIS USING FILE WRITER BUT IM NOT SURE IF IT WILL
     //INCREASE PERFROMANCE
-    private void writeFile(int[] array, File file) {
+    private void writeFile(int[] array, int valueCount, File file) {
         try {
             PrintWriter writer = new PrintWriter(file);
             
-            for(int i = 0; i < array.length; i++) {
+            for(int i = 0; i < valueCount; i++) {
                 writer.println(array[i]);
+                
             }
             
             writer.close();
@@ -192,8 +216,7 @@ public class FileSorter implements Runnable {
     }
     
     //Insertion sort because extremely small data set
-    private int[] sortArray(int[] arr) {
-        int n = arr.length;
+    private int[] sortArray(int[] arr, int n) {
         for (int i = 1; i < n; ++i) {
             int key = arr[i];
             int j = i - 1;

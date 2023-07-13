@@ -49,7 +49,10 @@ public class FileReceiver implements Runnable {
                 if(input.equals("EOF")) {
                     break;
                 } else {
-                    queue.enqueue(Integer.parseInt(input));
+                    String[] values = input.split(" ");
+                    for(int i = 0; i < values.length; i++) {
+                        queue.enqueue(Integer.valueOf(values[i]));
+                    }
                 }
                 
                 //Sending reponse 

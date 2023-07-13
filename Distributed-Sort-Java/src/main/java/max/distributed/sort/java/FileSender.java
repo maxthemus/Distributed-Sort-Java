@@ -20,6 +20,7 @@ public class FileSender implements Runnable {
     //Fields
     private File file;
     private Socket socket;
+    private final int MAX_SEND_COUNT = 100;
     
     
     //Constructor
@@ -44,9 +45,17 @@ public class FileSender implements Runnable {
             PrintWriter socketWriter = new PrintWriter(this.socket.getOutputStream(), true);
 
             //Keep sending until file is comp
+            int sendCount = 0;
             while(!queue.isDone()) {
                 if(queue.size() >= 1) {
-                    socketWriter.println(queue.dequeue());
+                    String string = "";
+                    while(queue.size() > 0 && sendCount < MAX_SEND_COUNT) {
+                        string += queue.dequeue() + " ";
+                        sendCount++;
+                    }
+//                    System.out.println("SENDING STRING == " + string);
+                    socketWriter.println(string);
+                    sendCount = 0; //Resetting send Count
                     socketReader.readLine();
                 } else {
                     Thread.yield();
@@ -54,9 +63,17 @@ public class FileSender implements Runnable {
             }
             
             //Clearing rest of queue
+            sendCount = 0;
             while(queue.size() >= 1) {
-                socketWriter.println(queue.dequeue());
-                socketReader.readLine();
+                String string = "";
+                    while(queue.size() > 0 && sendCount < MAX_SEND_COUNT) {
+                        string += queue.dequeue() + " ";
+                        sendCount++;
+                    }
+//                    System.out.println("SENDING STRING == " + string);
+                    socketWriter.println(string);
+                    sendCount = 0; //Resetting send Count
+                    socketReader.readLine();
             }
             
             //Sending EOF

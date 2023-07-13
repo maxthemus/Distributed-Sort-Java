@@ -40,6 +40,7 @@ public class Client {
 
     
     public File networkSortFile(File fileToSort, File outputFile) {
+        System.out.println(this.connections.size());
         //Check if socket is open
         if(this.connections.size() <= 0) {
             return null;
@@ -69,7 +70,7 @@ public class Client {
             return null;
         }
 
-//        System.out.println("SENDING FILES");
+        System.out.println("SENDING FILES");
         //Creating sender threads
         Thread[] senderThreads = new Thread[files.length-1];
         
@@ -79,7 +80,7 @@ public class Client {
             senderThreads[i-1].start();
         }
         
-//        System.out.println("SORTING START");
+        System.out.println("SORTING START");
         //Creating the sorter thread
         FileSorter localSorter = new FileSorter(files[0], WINDOWS_PATH_NAME + "temp\\");
         Thread sorterThread = new Thread(localSorter);
@@ -96,9 +97,9 @@ public class Client {
             }
         }
         
-//        System.out.println("SEND DONE");
+        System.out.println("SEND DONE");
         
-//        System.out.println("STARTING Reciever");
+        System.out.println("STARTING Reciever");
         
         //Now we want to wait to recieve a file from the different sockets
         FileReceiver[] recievers = new FileReceiver[senderThreads.length];
@@ -115,7 +116,7 @@ public class Client {
         //Now we want to join the sorter thread and copy file into index 0 of outputFiles
         try {
             sorterThread.join();
-//            System.out.println("SORTING DONE");
+            System.out.println("SORTING DONE");
         } catch(Exception e ){
             System.out.println("ERROR SORTING");
             System.exit(1);
@@ -137,7 +138,7 @@ public class Client {
             }
         }
         
-//        System.out.println("FILE RECIEVED");
+        System.out.println("FILE RECIEVED");
         
         //Now that we have all the files we need to merge them into one file and then 
         FileMerger merger = new FileMerger("final", WINDOWS_PATH_NAME + "temp\\");
@@ -147,28 +148,29 @@ public class Client {
             placeIndex = 0;
             for(int i = 0; i < segEnd; i+=2) {
                 File tempOne = outputFiles[i];
-                File tempTwo = outputFiles[i+1];
-                outputFiles[i] = null;
-                outputFiles[i+1] = null;
-                
-                if(tempTwo == null) {
+                if (i + 1 >= outputFiles.length) {
                     outputFiles[placeIndex++] = tempOne;
                 } else {
-                    File mergedFile = merger.mergeFiles(tempOne, tempTwo);
-                    outputFiles[placeIndex++] = mergedFile;
+                    if (outputFiles[i + 1] == null) {
+                        outputFiles[placeIndex++] = tempOne;
+                    } else {
+                        File tempTwo = outputFiles[i + 1];
+                        File mergedFile = merger.mergeFiles(tempOne, tempTwo);
+                        outputFiles[placeIndex++] = mergedFile;
+                        //tempTwo.delete(); 
+                    }
                 }
-             
                 //Cleaning up old files
-                tempOne.delete();
-                tempTwo.delete();
+                //tempOne.delete();
             }
             segEnd = placeIndex;
         }
         
         //Now we want to merge the last two files into the output file
         merger.mergeFiles(outputFiles[0], outputFiles[1], outputFile);
-        outputFiles[0].delete();
-        outputFiles[1].delete();
+  
+        
+        System.out.println("FILES MERGED");
         
         for(int i = 0; i < files.length; i++) {
             files[i].delete();
@@ -186,7 +188,7 @@ public class Client {
         String networkAdr = "127.0.0.1";
         Client client = new Client();
         client.connectClient(networkAdr, 3010);
-        
+//        client.connectClient("192.168.1.174", 3010);
         
         double start = System.nanoTime();
 
@@ -200,8 +202,7 @@ public class Client {
         } else {
 //            System.out.println(outputFile.getName());
         }
-        System.out.println("TIME");
-        System.out.println("TOOK : " + (time));
+        System.out.println("TIME : " + (time));
         System.exit(0);
     }
 }
