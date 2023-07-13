@@ -18,26 +18,30 @@ public class Client {
     private static final String WINDOWS_PATH_NAME = "files\\client\\";
     private static final String LINUX_PATH_NAME = "files/client/";
     private static final String PATH_NAME = "files\\client\\";
-    private Socket socket;
+    private ArrayList<Socket> connections;
 //    private PrintWriter writer;
 //    private BufferedReader reader;
     
     //Constructor
-    public Client(String address, int port) {
-        try {
-            //Connecting socket
-            this.socket = new Socket(address, port);
-        } catch(Exception e) {
-            System.out.println(e);
-        }
+    public Client() {
+        this.connections = new ArrayList<>();
     }
     
-    
+    public boolean connectClient(String address, int port) {
+        try {
+            Socket tempSocket = new Socket(address, port);
+            connections.add(tempSocket);
+        } catch(Exception e) {
+            System.out.println(e);
+            return false;
+        }
+        return true;
+    }
 
     
     public File networkSortFile(File fileToSort, File outputFile) {
         //Check if socket is open
-        if(this.socket == null) {
+        if(this.connections.size() <= 0) {
             return null;
         }
         
@@ -45,10 +49,10 @@ public class Client {
         LinkedQueue<Integer> queue = new LinkedQueue<>();
         FileReader fileReader = new FileReader(fileToSort, queue);
         
-        
-        File localOut = new File(WINDOWS_PATH_NAME + "temp\\local");
-        File networkOut = new File(WINDOWS_PATH_NAME + "temp\\network");
-        File[] files = {localOut, networkOut};
+        File[] files = new File[this.connections.size()+1];
+        for(int i = 0; i < files.length; i++) {
+            files[i] = new File(WINDOWS_PATH_NAME + "temp\\original_"+i);
+        }
         
         Distributor distributor = new Distributor(queue, files);
         
@@ -70,7 +74,7 @@ public class Client {
         Thread[] senderThreads = new Thread[files.length-1];
         
         for(int i = 1; i < files.length; i++) {
-            FileSender sender = new FileSender(files[i], socket);
+            FileSender sender = new FileSender(files[i], this.connections.get(i-1));
             senderThreads[i-1] = new Thread(sender);
             senderThreads[i-1].start();
         }
@@ -102,7 +106,7 @@ public class Client {
         Thread[] recieverThreads = new Thread[senderThreads.length];
         for(int i = 0; i < senderThreads.length; i++) {
             outputFiles[i+1] = new File(PATH_NAME + "temp\\output_" + i);
-            recievers[i] = new FileReceiver(outputFiles[i+1], this.socket);
+            recievers[i] = new FileReceiver(outputFiles[i+1], this.connections.get(i));
             recieverThreads[i] = new Thread(recievers[i]);
             recieverThreads[i].start();
         }
@@ -178,8 +182,10 @@ public class Client {
         File inputFile = new File("files\\client\\input");
         File outputFile = new File("files\\client\\output");
         
-        Client client = new Client("127.0.0.1", 3010);
-        
+//        String networkAdr = "192.168.1.239";
+        String networkAdr = "127.0.0.1";
+        Client client = new Client();
+        client.connectClient(networkAdr, 3010);
         
         
         double start = System.nanoTime();
