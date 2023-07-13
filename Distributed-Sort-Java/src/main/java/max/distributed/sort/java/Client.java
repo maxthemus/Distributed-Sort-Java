@@ -184,8 +184,8 @@ public class Client {
         File inputFile = new File("files\\client\\input");
         File outputFile = new File("files\\client\\output");
         
-//        String networkAdr = "192.168.1.239";
-        String networkAdr = "127.0.0.1";
+        String networkAdr = "192.168.1.239";
+//        String networkAdr = "127.0.0.1";
         Client client = new Client();
         client.connectClient(networkAdr, 3010);
 //        client.connectClient("192.168.1.174", 3010);
